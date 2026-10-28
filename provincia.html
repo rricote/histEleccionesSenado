@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Resultados del Senado en una circunscripción: candidatos, márgenes, umbrales y mapa por municipios.">
+<title>Resultados por circunscripción</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/senado.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="sitetitle"><a href="index.html">Elecciones al Senado</a></div>
+  <div class="topbar">
+    <nav class="crumbs" id="crumbs" aria-label="Migas de pan"></nav>
+  </div>
+  <div id="bar"></div>
+<nav class="tabs" role="tablist" aria-label="Secciones"><button type="button" role="tab" id="tab-prov" aria-controls="p-prov" aria-selected="true">Circunscripción</button><button type="button" role="tab" id="tab-muns" aria-controls="p-muns" aria-selected="false" tabindex="-1">Análisis detallado de los municipios</button><button type="button" role="tab" id="tab-par" aria-controls="p-par" aria-selected="false" tabindex="-1">Partidos</button></nav>
+  <div class="panel" id="p-prov" role="tabpanel" aria-labelledby="tab-prov">
+  <section class="card pd" id="pd"></section>
+
+  <section class="card">
+    <h2>Candidatos</h2>
+    <p class="note" id="ctn"></p>
+    <div class="tw"><table class="pt mt ctab" id="ctab"></table></div>
+    <p style="margin:10px 0 0"><button type="button" class="ghost" id="allc">Mostrar todos los candidatos</button></p>
+  </section>
+
+  <section class="card" id="thc"></section>
+
+  <div class="mapwrap provwrap" id="mapbox">
+    <section class="card mapcol">
+      <h2 id="mapt">Mapa por municipios</h2>
+      <div class="toolrow"><label class="fld"><span class="lbl">Color</span><select id="colSel"></select></label></div>
+      <p class="note" id="mapn" style="margin-top:8px"></p>
+      <svg class="pmap munmap" id="pmap" role="img" aria-label="Mapa de la circunscripción"></svg>
+      <div class="leg2" id="mleg"></div>
+      <div class="seatstrip" id="seatstrip" aria-label="Senadores de la circunscripción"></div>
+      <p class="mapnote" id="mapnote"></p>
+    </section>
+  </div>
+  </div>
+  <div class="panel" id="p-muns" role="tabpanel" aria-labelledby="tab-muns" hidden>
+  <section class="card" id="pbcard"></section>
+  <div class="cols one">
+    <section class="card">
+      <h2 id="mtt">Municipios</h2>
+      <p class="note">Cada columna es un candidato: % de papeletas válidas del municipio y sus votos. Pulsa una fila para ver el municipio. Ordena con las cabeceras.</p>
+      <label class="fld sel" style="max-width:260px"><span class="lbl">Filtrar por nombre</span><input id="mfilt" class="in" style="border:1px solid var(--rule);padding:7px 9px" placeholder="Escribe…"></label>
+      <div class="tw tall"><table class="pt mt mun" id="mtab"></table></div>
+    </section>
+  </div>
+  </div>
+  <div class="panel" id="p-par" role="tabpanel" aria-labelledby="tab-par" hidden></div>
+  <div class="notes" id="notes"></div>
+</div>
+<div class="tt" id="tt"></div>
+<script src="js/lib.js" charset="utf-8"></script>
+<script>
+let P, C, A, PJ, MAPM, M = [], ALLC = false, COL = -1, SORT = { k: 'censo', d: -1 }, FILT = '', PBS;
+const PID = (() => { const c = Q.get('c'); if (c && /^\d{3}$/.test(c)) return c.slice(0, 2); const p = Q.get('p') || DEF_PROV; return /^\d\d$/.test(p) ? p : DEF_PROV })();
+function pickCirc() { const c = Q.get('c'); return P.cl.find(x => x.id === c) || P.cl.slice().sort((a, b) => b.s - a.s || b.censo - a.censo)[0] }
+const vot = x => nf(Math.abs(x));
+const ptsv = x => nf(Math.abs(x) * 100, 2) + ' pts';
+function build() {
+  M = !PJ ? [] : PJ.m.filter(m => m[6] === C.id).map(m => { const vec = m[7], v = partyV(C, vec); return { id: PID + m[0], c3: m[0], n: m[1], censo: m[2], bl: m[3], nu: m[4], vb: m[5], vec, v, w: winOf(v, m[3], m[5]), part: m[2] ? (m[5] + m[4]) / m[2] : 0, secs: m[8].length, pob: m[9] } });
+}
+function head() {
+  const a = A, l = a.last, f = a.first, g = a.gap, ind = C.c.filter(r => r[3] && r[4]).length;
+  $('#pd').innerHTML = `<h3>${esc(C.n)}</h3><div class="meta">${C.isl ? 'Circunscripción insular · provincia de ' + esc(P.n) + ' · ' : ''}${esc(ccName(P.cc))} · ${C.s} ${senW(C.s)} · cada elector vota hasta ${C.vmax} ${C.vmax === 1 ? 'candidato' : 'candidatos'} · ${nf(C.vb)} papeletas válidas</div>
+  ${P.cl.length > 1 ? `<div class="isl" role="group" aria-label="Islas">${P.cl.map(c => `<a class="cchip" href="${hCirc(c.id)}" aria-pressed="${c.id === C.id}" role="button">${esc(c.n)} · ${c.s}</a>`).join('')}</div>` : ''}
+  <div class="kpis k4"><div><b>${fmt((C.vb + C.nu) / C.censo)}</b><span>participación (${nf(C.vb + C.nu)} votantes de ${nf(C.censo)} electores)</span></div>
+  <div><b>${l ? fmt(l.sh) : '–'}</b><span>corte real: ${l ? `el último electo, ${esc(l.nm)} (${esc(G.parties[l.i].n)}), con ${nf(l.v)} votos` : ''}</span></div>
+  <div><b>${f ? esc(f.nm) : '–'}</b><span>${f ? `primero fuera (${esc(G.parties[f.i].n)}), con ${fmt(f.sh)} y ${nf(f.v)} votos` : 'no hubo más candidatos que escaños'}</span></div>
+  <div><b>${g !== null ? nf(g) : '–'}</b><span>${g !== null ? `votos separaron al último electo del primero fuera (${ptsv(g / C.vb)})` : ''}</span></div></div>
+  <div class="cselrow">${a.E.map(x => `<span class="wn" style="font-size:14px">${swatch(x.i, x.ind)}<b>${esc(x.nm)}</b>&nbsp;<small class="indn">${esc(G.parties[x.i].n)}${x.ind ? ' · independiente' : ''}</small></span>`).join('')}</div>
+  ${C.nota ? `<p class="pnd"><b>Aviso.</b> ${esc(C.nota)}</p>` : ''}
+  ${ind ? '<p class="pnd">Los candidatos con dos colores son independientes dentro de la lista del partido.</p>' : ''}`;
+}
+function ctable() {
+  const a = A, vb = C.vb, mx = a.L[0] ? a.L[0].sh : 1, l = a.last, f = a.first;
+  const ks = ALLC ? a.L : a.L.filter((x, k) => x.el || k < C.s + 6 || x.sh >= 0.05);
+  $('#ctn').innerHTML = `Ordenados por votos. Salen elegidos los ${C.s} más votados. «Margen»: a los electos, los votos que les sacaron al primer candidato que se quedó fuera; a los demás, los que les faltaron para alcanzar al último electo. «Necesitaba» es el % de papeletas con el que habría entrado (o el mínimo para no quedarse fuera), con el resto de candidatos igual.`;
+  $('#ctab').innerHTML = `<thead><tr><th>#</th><th>Candidato</th><th>Partido</th><th>Votos</th><th>% papeletas</th><th></th><th>Electo</th><th>Margen</th><th>Necesitaba</th></tr></thead><tbody>${ks.map((x, k) => {
+    const need = x.el ? (f ? (f.v + 1) / vb : 0) : (l ? (l.v + 1) / vb : 0), mg = x.el ? (f ? x.v - f.v : x.v) : x.v - (l ? l.v : 0);
+    return `<tr class="${x.el ? '' : 'out'}${x === l ? ' cut' : ''}"><td class="num">${a.L.indexOf(x) + 1}</td><td class="${x.el ? 'el' : ''}">${candLabel(x.r)}</td><td><span class="wn">${swatch(x.i)}${esc(G.parties[x.i].n)}</span></td><td class="num">${nf(x.v)}</td><td class="num"><b>${fmt(x.sh, 2)}</b></td><td class="bar"><i style="width:${(x.sh / mx * 100).toFixed(1)}%;background:${pcol(x.i)}"></i></td>
+      <td>${x.el ? `<span class="mk${x.ind ? ' ind' : ''}">${x.ind ? 'ELECTO · IND.' : 'ELECTO'}</span>` : ''}</td>
+      <td class="m ${mg >= 0 ? 'gd' : 'bd'}">${mg >= 0 ? '+' : '−'}${vot(mg)}<small>${mg >= 0 ? '+' : '−'}${ptsv(mg / vb)}</small></td>
+      <td class="m">${fmt(need, 2)}<small>${x.el ? 'mínimo para seguir dentro' : `le faltaron ${nf(Math.max(0, need - x.sh) * 100, 2)} pts`}</small></td></tr>` }).join('')}</tbody>`;
+  $('#allc').textContent = ALLC ? 'Mostrar solo los principales' : `Mostrar los ${a.L.length} candidatos`;
+  $('#allc').hidden = ks.length === a.L.length && !ALLC;
+}
+function thcard() {
+  const s = C.s, v = C.vmax, rows = []; for (let k = 1; k <= Math.min(s, v); k++) rows.push([k, guarantee(s, v, k)]);
+  const l = A.last, f = A.first;
+  const pv = G.parties.map((p, i) => i).filter(i => C.v[i] > 0).sort((a, b) => C.v[b] - C.v[a]), p1 = pv[0], p2 = pv[1];
+  $('#thc').innerHTML = `<h2>Porcentaje de voto necesario para cada senador</h2>
+  <p class="note">El Senado usa voto limitado: hay ${s} ${senW(s)} y cada elector vota a ${v === s ? s : 'como máximo ' + v}. Por eso no hay un reparto proporcional: salen los ${s} candidatos con más votos. Hay dos maneras de medir cuánto voto hace falta.</p>
+  <div class="thx">${rows.map(([k, t]) => `<div><b>${fmt(t)}</b><span>umbral teórico para asegurar ${k === 1 ? 'un senador' : k + ' senadores'}: con ese % de papeletas un partido ${k === 1 ? 'lo tiene' : 'los tiene'} garantizado${k === 1 ? '' : 's'} aunque todos los demás electores se pongan de acuerdo en su contra${t === 0.5 ? ' (más de la mitad: sus candidatos superan a cualquier rival)' : ''}.</span></div>`).join('')}
+  <div><b>${l ? fmt(l.sh) : '–'}</b><span>corte real de esta elección: el % del último electo${f ? `; el primero fuera se quedó en ${fmt(f.sh)}` : ''}.</span></div></div>
+  <p class="pnd">${s > v ? `Si todos votaran en bloque a los ${v} candidatos de su partido, el más votado se llevaría ${v} ${senW(v)} y el segundo ${s - v}: para el «senador de la minoría» basta con ser segundo${p1 !== undefined && p2 !== undefined ? ` (en esta elección, ${esc(G.parties[p1].n)} con ${fmt(C.v[p1] / C.vb)} frente a ${esc(G.parties[p2].n)} con ${fmt(C.v[p2] / C.vb)})` : ''}. El umbral teórico es v ÷ (v + e − k + 1), con e escaños, v votos por elector y k senadores, y nunca pasa del 50 %.` : 'Con un solo voto por elector y un único escaño, gana el candidato más votado: el 50 % lo garantiza siempre.'}</p>`;
+}
+/* ---- mapa ---- */
+function colorFn() {
+  if (COL < 0) return u => (u.w ? shade(u.w.w, u.w.m, 0.30) : '');
+  const xs = M.filter(u => u.vb > 0).map(u => u.vec[COL] / u.vb), mn = Math.min(...xs), mx = Math.max(...xs), r = mx - mn || 1, i = C.c[COL][1];
+  return u => u.vb > 0 ? `fill:${pcol(i)};fill-opacity:${(0.08 + 0.92 * (u.vec[COL] / u.vb - mn) / r).toFixed(2)}` : '';
+}
+function candsHTML(u) {
+  const rows = C.c.map((r, j) => ({ r, v: u.vec[j] })).sort((a, b) => b.v - a.v).slice(0, 8);
+  return `<table class="pt mt prt vt" style="margin-bottom:10px"><thead><tr><th>Candidato</th><th>Votos</th><th>% aquí</th><th>% circ.</th></tr></thead><tbody>${rows.map(x => `<tr><td>${candLabel(x.r)}${x.r[3] ? ' <span class="mk" style="font-size:9.5px">E</span>' : ''}</td><td class="num">${nf(x.v)}</td><td class="num"><b>${fmt(u.vb ? x.v / u.vb : 0)}</b></td><td class="num">${fmt(x.r[2] / C.vb)}</td></tr>`).join('')}</tbody></table>`;
+}
+function map() {
+  const svg = $('#pmap'), byId = {}; M.forEach(m => byId[m.c3] = m); const cf = colorFn();
+  const ms = MAPM.ms.filter(x => byId[x[0]] || !C.isl);
+  svg.setAttribute('viewBox', `0 0 ${MAPM.w} ${MAPM.h}`);
+  $('#mapn').textContent = COL < 0 ? 'Color: partido del candidato más votado en cada municipio; cuanto más pálido, menor la ventaja sobre el candidato más votado del segundo partido. Pasa el ratón por un municipio para ver su voto abajo; pulsa para fijarlo.' : `Color: % de papeletas de ${C.c[COL][0]} en cada municipio (más intenso = mayor porcentaje).`;
+  svg.innerHTML = '<g id="gm">' + ms.map(([c3, name, d]) => { const m = byId[c3]; if (!m || !m.w) return `<path class="nd" d="${d}"><title>${esc(name)} · sin datos</title></path>`;
+    return `<path d="${d}" style="${cf(m)}" data-m="${m.id}" tabindex="0" role="link" aria-label="${esc(name)}"><title>${esc(name)} · ${esc(G.parties[m.w.w].n)} ${fmt(m.w.sh)}${COL >= 0 ? ' · ' + esc(C.c[COL][0]) + ' ' + fmt(m.vec[COL] / m.vb) : ''}</title></path>` }).join('') + '</g>';
+  if (C.isl || P.cl.length > 1) { const bb = $('#gm').getBBox(), pad = Math.max(bb.width, bb.height) * 0.03; if (bb.width) svg.setAttribute('viewBox', `${bb.x - pad} ${bb.y - pad} ${bb.width + 2 * pad} ${bb.height + 2 * pad}`) }
+  hoverFront(svg);
+  const oldp = document.getElementById('upanel'); if (oldp) oldp.remove();
+  attachPanel(svg, 'path[data-m]', 'm', id => { const m = M.find(x => x.id === id); if (!m) return null;
+    return { title: m.n, meta: `${nf(m.censo)} electores${G.sections ? ` · ${nf(m.secs)} ${m.secs === 1 ? 'sección censal' : 'secciones censales'}` : ''}`, cands: candsHTML(m), v: m.v, bl: m.bl, nu: m.nu, vb: m.vb, censo: m.censo, ref: { v: C.v, bl: C.bl, vb: C.vb }, refName: 'la circunscripción',
+      action: { label: G.sections ? 'Ver detallado por sección censal →' : 'Ver el municipio →', run: () => nav(hMun(m.id)) } } }, 'Pasa el ratón por un municipio para ver su voto al detalle. Pulsa para fijarlo y poder ir a su vista.');
+  if (COL < 0) { const used = new Set(M.filter(m => m.w).map(m => m.w.w)); $('#mleg').innerHTML = [...used].map(i => `<span><i style="background:${pcol(i)}"></i>${esc(G.parties[i].n)}</span>`).join('') + '<span>Más pálido = ventaja más corta</span>' }
+  else { const xs = M.filter(u => u.vb > 0).map(u => u.vec[COL] / u.vb); $('#mleg').innerHTML = `<span>${fmt(Math.min(...xs))}</span><span style="display:inline-block;width:120px;height:10px;border-radius:2px;background:linear-gradient(90deg,color-mix(in srgb,${pcol(C.c[COL][1])} 8%,transparent),${pcol(C.c[COL][1])})"></span><span>${fmt(Math.max(...xs))} · % de ${esc(C.c[COL][0])}</span>` }
+  const list = A.E.slice().sort((a, b) => seatKey(G.parties[a.i].k) - seatKey(G.parties[b.i].k));
+  $('#seatstrip').innerHTML = list.map(x => `<i style="background:${x.ind ? `linear-gradient(90deg,var(--c-INDX) 50%,${pcol(x.i)} 50%)` : pcol(x.i)}" title="${esc(x.nm)} · ${esc(G.parties[x.i].n)}"></i>`).join('');
+  const cnt = {}; M.forEach(m => { if (m.w) cnt[m.w.w] = (cnt[m.w.w] || 0) + 1 });
+  $('#mapnote').innerHTML = 'Municipios ganados: ' + Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 5).map(i => `<b style="color:${pcol(i)}">${esc(G.parties[i].n)} ${nf(cnt[i])}</b>`).join(' · ');
+}
+/* ---- análisis de municipios ---- */
+const TOPC = () => A.L.slice(0, Math.min(A.L.length, C.s + 6)).map(x => x.j);
+function mtable() {
+  const cs = TOPC(), q = FILT.trim().toLowerCase();
+  const rows = M.filter(m => !q || m.n.toLowerCase().includes(q)).map(m => { const o = { m, name: m.n, censo: m.censo, part: m.part, ganador: m.w ? G.parties[m.w.w].n : '', sh: m.w ? m.w.sh : 0 }; cs.forEach(j => o['c' + j] = m.vb ? m.vec[j] / m.vb : 0); return o });
+  const k = SORT.k; rows.sort((a, b) => (typeof a[k] === 'string' ? a[k].localeCompare(b[k], 'es') : a[k] - b[k]) * SORT.d);
+  const th = (key, lab, cls = '') => `<th data-s="${key}" ${SORT.k === key ? `aria-sort="${SORT.d > 0 ? 'ascending' : 'descending'}"` : ''} class="${cls}">${lab}</th>`;
+  $('#mtt').textContent = `Municipios de ${C.n} (${nf(M.length)})`;
+  $('#mtab').innerHTML = `<thead><tr>${th('name', 'Municipio', 'stk')}${th('censo', 'Electores')}${th('part', 'Particip.')}${th('ganador', 'Partido más votado')}${cs.map(j => th('c' + j, candLabel(C.c[j]))).join('')}</tr></thead><tbody>${rows.map(r => `<tr class="rw" data-m="${r.m.id}"><td class="stk">${esc(r.name)}</td><td class="num">${nf(r.censo)}</td><td class="num">${fmt(r.part)}</td><td>${r.m.w ? `<span class="wn">${swatch(r.m.w.w)}${esc(r.ganador)}</span>` : '–'}</td>${cs.map(j => `<td class="num pc">${fmt(r['c' + j])}<small>${nf(r.m.vec[j])}</small></td>`).join('')}</tr>`).join('')}</tbody>`;
+  $('#mtab').querySelectorAll('th[data-s]').forEach(t => t.onclick = () => { const kk = t.dataset.s; SORT = { k: kk, d: SORT.k === kk ? -SORT.d : (kk === 'name' || kk === 'ganador' ? 1 : -1) }; mtable() });
+  $('#mtab').querySelectorAll('tr.rw').forEach(t => t.onclick = () => nav(hMun(t.dataset.m)));
+}
+function pblock() {
+  const ps = C.v.map((x, i) => i).filter(i => C.v[i] > 0).sort((a, b) => C.es[b] - C.es[a] || C.v[b] - C.v[a]).slice(0, 12);
+  partyBlock($('#pbcard'), { state: PBS = PBS || { party: ps[0], ord: 'pct_desc' }, ps, units: M.map(m => ({ key: m.id, name: m.n, censo: m.censo, part: m.part, v: m.v, bl: m.bl, nu: m.nu, vb: m.vb })), parent: { v: C.v, bl: C.bl, vb: C.vb }, parentName: 'en la circunscripción',
+    unitName: 'Municipio', unitsPl: 'municipios', note: 'Voto de cada partido = el de su candidato más votado. El número junto al nombre es su número de senadores. Elige un partido y cómo ordenar los municipios: la tabla muestra los diez primeros.', chipSub: j => C.es[j] + ' sen.', onRow: id => nav(hMun(id)) });
+}
+function partidos() {
+  const ps = C.v.map((x, i) => i).filter(i => C.v[i] > 0).sort((a, b) => C.es[b] - C.es[a] || C.v[b] - C.v[a]).slice(0, 14), byId = {}; M.forEach(m => byId[m.c3] = m);
+  const shapes = MAPM.ms.filter(x => byId[x[0]]).map(([c3, nm, d]) => [PID + c3, d]);
+  partyTab($('#p-par'), { ps, parent: { name: C.n, short: 'circunscripción', v: C.v, bl: C.bl, vb: C.vb }, chipSub: j => C.es[j] + ' sen.',
+    seatKpi: i => `<div><b>${C.es[i] || 0}</b><span>senadores en ${esc(C.n)} · ${G.nat.el[i]} en España</span></div>`,
+    note: 'El número junto al nombre es su número de senadores aquí. Elige un partido para ver el porcentaje de su candidato más votado en cada municipio.',
+    levels: [{ id: 'mun', label: 'Municipios', one: 'Municipio', pl: 'municipios', labels: false, units: M.map(m => ({ key: m.id, name: m.n, v: m.v, bl: m.bl, vb: m.vb, link: hMun(m.id) })),
+      draw: (h, st, tx, ti, pk) => ptSvg(h, shapes, 'fit', st, null, ti, pk) }] });
+}
+(async () => {
+  try {
+    await loadG(); P = G.prov[G.pi[PID]]; if (!P) throw new Error('Provincia no encontrada: ' + PID); C = pickCirc(); A = circA(C);
+    if (G.muni) { [PJ, MAPM] = await Promise.all([loadProv(PID), loadMunMap(PID)]) }
+    build();
+    document.title = C.n + ' · Senado ' + G.year;
+    crumbs([{ t: 'España', h: href('index.html') }, { l: C.isl ? 'Provincia' : 'Circunscripción', t: P.n, h: C.isl ? hProv(PID) : null }].concat(C.isl ? [{ l: 'Isla', t: C.n }] : []));
+    await mountBar(C.isl ? C.id : PID, null); mountTabs();
+    head(); ctable(); thcard();
+    $('#allc').onclick = () => { ALLC = !ALLC; ctable() };
+    if (!G.muni || !M.length || !MAPM) { $('#mapbox').hidden = true; document.querySelector('.tabs').style.display = 'none' }
+    else {
+      $('#colSel').innerHTML = '<option value="-1">Partido más votado</option>' + A.L.slice(0, Math.min(A.L.length, 12)).map(x => `<option value="${x.j}">% de ${esc(x.nm)} (${esc(G.parties[x.i].n)})</option>`).join('');
+      $('#colSel').onchange = e => { COL = +e.target.value; map() };
+      map(); mtable(); pblock(); partidos();
+      $('#mfilt').oninput = e => { FILT = e.target.value; mtable() };
+    }
+    $('#notes').innerHTML = notesHTML();
+  } catch (e) { console.error(e); $('#notes').textContent = 'No se pudieron cargar los datos: ' + e }
+})();
+</script>
+</body>
+</html>

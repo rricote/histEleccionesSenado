@@ -1,0 +1,1 @@
+Los mapas de secciones censales (mapas/sec/) son los mismos que los de resultados-generales-web: copia esa carpeta aquí para verlos en local.

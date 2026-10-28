@@ -1,0 +1,21 @@
+Resultados del Senado (1977-2023): fuentes y proceso
+=====================================================
+
+Fuentes
+- Ministerio del Interior, ficheros de resultados del Senado (tipo 03): carpeta elecciones/Senado (03aaaamm_MESA.zip desde 1986; 03aaaamm_TOTA.zip para 1977, 1979 y 1982, solo por circunscripción).
+  03 candidaturas · 04 candidatos (código senador = provincia + distrito + orden) · 05/06 municipios · 07/08 circunscripciones · 09/10 mesas.
+- Senado de España, fichas de senadores por legislatura (web del Senado, «Composición del Senado desde 1977»): procedencia (electo / designado por un parlamento autonómico / designación real), fecha, baja, grupo y partido político. De ahí salen los designados y los independientes (senado_fichas.json).
+- Congreso (artefacto «Elecciones al Congreso de los Diputados»): mapas (provincias, comunidades, municipios, secciones censales) y, en 1977-1982, papeletas válidas/blancos/nulos de las circunscripciones en que el Interior no las publica para el Senado (estimadas con el Congreso del mismo día).
+
+Proceso
+1. parse_sen.py  -> lee raw/<carpeta>/ y deja build/pk/<aaaa-mm>.pkl
+2. senado.json   -> designados e independientes por legislatura, generado desde senado_fichas.json (fichas.py)
+3. build_sen.py  -> out/datos/<aaaa-mm>/general.json.js, prov_b<k>.json.js, municipios.json.js y datos/elecciones.json.js
+   independientes.json (opcional, editable a mano): {"2023-07": [{"nombre": "Nombre Apellido Apellido"}], ...} marca candidatos como independientes.
+
+Cálculos
+- Salen elegidos los candidatos más votados de cada circunscripción (4 por provincia, 3 en Gran Canaria, Mallorca y Tenerife, 1 en el resto de islas, 2 en Ceuta y Melilla). Voto limitado: 3, 2 o 1 voto por elector.
+- Voto de un partido en un territorio = votos de su candidato más votado; % sobre papeletas válidas (con blancas).
+- Margen: electos frente al primer no electo; no electos frente al último electo.
+- Umbral teórico para asegurar k senadores = v / (v + e - k + 1), con e escaños y v votos por elector, como máximo 50 %.
+- Verificado: 207/208 electos por elección coinciden con el fichero de candidatos; los votos por mesa cuadran con el fichero municipal (diferencia < 0,35 %).

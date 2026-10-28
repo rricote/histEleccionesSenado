@@ -1,0 +1,29 @@
+/* Añadidos para la web del Senado (sobre style.css de la web del Congreso) */
+.elc{border-top:1px solid var(--rule);padding:8px 0 6px}
+.elc:first-of-type{border-top:0}
+.elh{font:600 13px var(--f-body);margin-bottom:4px}.elh small{font:400 11.5px var(--f-mono);color:var(--muted);margin-left:6px}
+.elr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 10px;align-items:baseline;font-size:13.5px;padding:2px 0}
+.elr .pt2{font-size:12px;color:var(--muted)}
+.elr .d{font:500 12.5px var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.indn{font:500 11px var(--f-mono);color:var(--muted)}
+.ls .hd small{display:block;font:400 11.5px var(--f-body);color:var(--muted)}
+.ls .hd{font-size:12.5px}
+.ctab td.el{font-weight:700}
+.ctab tr.out td{color:var(--muted)}
+.ctab tr.cut td{border-bottom:2px solid var(--ink)}
+.ctab .mk{display:inline-block;font:600 10.5px var(--f-mono);letter-spacing:.04em;padding:2px 6px;border-radius:3px;background:var(--ink);color:var(--bg)}
+.ctab .mk.ind{background:var(--c-INDX);color:var(--ink)}
+.ctab td.bar{width:110px;min-width:70px}
+.ctab td.bar i{display:block;height:8px;border-radius:2px}
+.ctab td.m{font:500 12.5px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ctab td.m small{display:block;color:var(--muted);font-size:11px}
+.thx{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 22px;margin-top:6px}
+.thx > div{border:1px solid var(--rule);border-radius:6px;padding:12px 14px}
+.thx b{display:block;font:800 26px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.thx span{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+.pnd{margin:10px 0 0;font-size:12.5px;color:var(--muted)}
+.isl{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 0}
+.cselrow{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.cchip{border:1px solid var(--rule);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 10px;font:500 12.5px var(--f-body);cursor:pointer}
+.cchip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:0}
