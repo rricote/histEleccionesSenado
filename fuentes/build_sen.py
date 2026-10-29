@@ -31,9 +31,11 @@ STY.update({
 })
 IND_C = ('#c9ced4', '#5d646c')   # gris claro (claro, oscuro) para independientes dentro de listas
 
+STOP = {'I', 'Y', 'DE', 'DEL', 'LA', 'LAS', 'LOS', 'EL'}
+VAR = {'JOSE': 'JOSEP', 'JAIME': 'JAUME', 'PEDRO': 'PERE', 'CARLOS': 'CARLES', 'FRANCISCO': 'FRANCESC', 'NORELL': 'MORELL'}
 def norm(s):
     s = unicodedata.normalize('NFD', s.upper()); s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
-    return re.sub(r'[^A-Z ]', ' ', s).split()
+    return [VAR.get(w, w) for w in re.sub(r'[^A-Z ]', ' ', s).split() if w not in STOP]
 
 def senkey(sig, nom, year):
     if re.fullmatch(r'\s*(?:[A-Za-zÁÉÍÓÚÑ]\.\s*){2,}[A-Za-z]?\.?\s*', sig) or re.fullmatch(r'(?:[A-Z]\.){2,}[A-Z]?\.?(?:-[A-Z.]+)*', sig.replace(' ', '')):
@@ -136,16 +138,17 @@ def build(e):
         nm = nmk[k]; parties.append(dict(k=k, n=dn, full=nm.title() if nm.isupper() else nm, c=c, d=dk))
     # independientes y designados (fichas del Senado)
     leg = LEG[e]; S = SEN.get(str(leg), {})
-    indset = {}
-    for r in S.get('el', []):     # [nombre, circ literal, partido siglas, partido nombre, ind(bool)]
-        if r[4]: indset[tuple(sorted(norm(r[0])))] = r
-    for r in MAN.get(e, []): indset[tuple(sorted(norm(r['nombre'])))] = r
+    indset = []   # (tokens del apellido, inicial del nombre)
+    for r in S.get('el', []):
+        if r[4] and not re.match(r'INDEPEND', r[5] if len(r) > 5 else '', re.I):
+            ap = r[0].split()[-2:]; indset.append((norm(' '.join(ap)), norm(r[0])[0][0]))
+    for r in MAN.get(e, []):
+        indset.append((norm(r.get('apellidos') or ' '.join(r['nombre'].split()[-2:])), norm(r['nombre'])[0][0]))
     def is_ind(nm):
-        t = tuple(sorted(norm(nm)))
-        if t in indset: return True
-        st = set(t)
-        for k in indset:
-            if len(st & set(k)) >= min(3, len(k)) and len(st & set(k)) >= len(k) - 1: return True
+        t = norm(nm)
+        if not t: return False
+        for ap, ini in indset:
+            if ap and all(w in t for w in ap) and t[0][0] == ini: return True
         return False
     circs = []
     for cid in sorted(circ):
@@ -153,7 +156,7 @@ def build(e):
         s = sum(1 for x in cs if x['el'])
         rows = []
         for x in cs:
-            pi = kidx[ck[x['cand']]]; ind = 1 if (x['el'] and is_ind(x['nm'])) else 0
+            pi = kidx[ck[x['cand']]]; ind = 1 if (x.get('ind') or (x['el'] and is_ind(x['nm']))) else 0
             if parties[pi]['k'] == 'IND': ind = 0
             rows.append([x['nm'], pi, x['v'], 1 if x['el'] else 0, ind, x['code']])
         circs.append(dict(id=cid, p=c['p'], n=c['n'], s=s, est=c.get('est', 0), vmax=VMAX.get(s, max(1, s - 1)), censo=c['censo'], bl=c['bl'], nu=c['nu'], vb=c['vc'] + c['bl'], c=rows))

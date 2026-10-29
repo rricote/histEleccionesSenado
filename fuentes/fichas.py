@@ -24,6 +24,8 @@ def parse(txt):
     pn = m.group(1) if m else ''
     pn = re.split(r'\s*(?:Información al Ciudadano|Cargos en el Senado|Legislatura actual|Participa|Agenda|Fecha anterior|Sustituye a|Otras Legislaturas|\$\()', pn)[0].strip()
     ms = re.search(r'\(([^()]*)\)\s*$', pn); o['ps'] = ms.group(1) if ms else pn; o['pn'] = re.sub(r'\s*\([^()]*\)\s*$', '', pn)
+    m = re.search(r'Formación electoral por la que se presentó a las elecciones: (.*?)Partido político', txt)
+    o['fe'] = m.group(1).strip() if m else ''
     o['sust'] = 'Sustituye a' in txt
     return o
 
@@ -64,7 +66,7 @@ def main():
         for (id_, leg), (nm, o) in P.items():
             if leg == lg and o.get('tipo') == 'E':
                 ind = bool(re.search(r'INDEPEND', o['ps'] + ' ' + o['pn'], re.I)) or o['ps'].upper() in ('IND', 'IND.', 'INDEP.')
-                el.append([title(nm), o['lugar'], o['ps'], o['pn'], ind])
+                el.append([title(nm), o['lugar'], o['ps'], o['pn'], ind, o.get('fe', '')])
         des.sort(key=lambda x: (x[4], x[0]))
         kind = 'real' if lg == 0 else 'auto'
         note = 'En la legislatura constituyente (1977) el Rey designó 41 senadores; el Senado da su grupo parlamentario, no su partido.' if lg == 0 else \

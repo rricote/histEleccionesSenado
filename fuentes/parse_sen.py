@@ -38,7 +38,7 @@ def parse(e):
         if hasT and l[24] != 'T': continue
         p, d, o = l[9:11], l[11], l[12:15]
         code = p + d + o
-        if year <= 1982:
+        if year <= 2004:
             # en los ficheros antiguos el nombre completo se reparte en los tres campos de 25 caracteres, cortando palabras
             raw = ''
             for f in (l[25:50], l[50:75], l[75:100]):
@@ -46,7 +46,9 @@ def parse(e):
             nm = title(raw)
         else:
             nm = title(' '.join(x.strip() for x in (l[25:50], l[50:75], l[75:100]) if x.strip()))
-        C[code] = dict(code=code, p=p, d=d, o=int(o), cand=int(l[15:21]), nord=int(l[21:24]), nm=nm, sx=l[100:101], el=l[119:120] == 'S', v=0)
+        tag = re.search(r'\s*\((?:INDEPENDIENTE|INDEPENDENT|IND\.?|INDEP\.?)\)', nm, re.I)
+        if tag: nm = (nm[:tag.start()] + nm[tag.end():]).strip()
+        C[code] = dict(ind=bool(tag), code=code, p=p, d=d, o=int(o), cand=int(l[15:21]), nord=int(l[21:24]), nm=nm, sx=l[100:101], el=l[119:120] == 'S', v=0)
     # circunscripciones (07)
     circ = {}
     for l in rd(e, '07'):
