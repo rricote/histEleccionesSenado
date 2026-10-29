@@ -65,7 +65,7 @@ def main():
             for x in a.values(): des.append([x['nm'], x['lugar'], x['ps'], x['pn'], '' if cc == 'R' else cc, x.get('fill', 0)])
         for (id_, leg), (nm, o) in P.items():
             if leg == lg and o.get('tipo') == 'E':
-                ind = bool(re.search(r'INDEPEND', o['ps'] + ' ' + o['pn'], re.I)) or o['ps'].upper() in ('IND', 'IND.', 'INDEP.')
+                ind = o['pn'].strip().upper() == 'INDEPENDIENTE' or o['ps'].upper() in ('IND', 'IND.', 'INDEP', 'INDEP.')
                 el.append([title(nm), o['lugar'], o['ps'], o['pn'], ind, o.get('fe', '')])
         des.sort(key=lambda x: (x[4], x[0]))
         kind = 'real' if lg == 0 else 'auto'
