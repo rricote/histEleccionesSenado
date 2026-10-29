@@ -24,6 +24,7 @@ STY.update({
  'CATSEN': ('Catalunya al Senat', '#1d3f94', '#5577cc'),
  'FA': ('Frente Autonómico', '#0b6b3a', '#3aa56a'),
  'IND': ('Independientes', '#a3a9b0', '#8b929a'),
+ 'REAL': ('Designados por el Rey', '#b8860b', '#d9ae3c'),
  'CAMBIO': ('Cambio-Aldaketa', '#c2185b', '#e0507f'),
  'AHI': ('AHI', '#3d8b5a', '#5fb07d'),
  'ASG': ('ASG', '#1f8a70', '#3db394'),
@@ -180,13 +181,14 @@ def build(e):
         for r in S['des']:   # [nombre, órgano, partido siglas, partido nombre, ccaa]
             k = senkey(r[2], r[3], year) or ('X' + re.sub(r'[^A-Z0-9]', '', r[2].upper())[:12])
             if r[2].upper().startswith('INDEP') or not r[2]: k = 'IND'
+            if S.get('kind') == 'real': k = 'REAL'
             if k not in keyidx:
                 if k in STY: dn, c_, d_ = STY[k]; dn = P.disp_name(k, year, dn)
                 else: dn, c_, d_ = r[2] or 'Otros', '#8a94a1', '#7a8593'
                 parties.append(dict(k=k, n=dn, full=r[3].title() if r[3].isupper() else r[3], c=c_, d=d_)); keyidx[k] = len(parties) - 1
                 for f in ('v', 'el', 'cand'): nat[f].append(0)
                 dcnt.append(0)
-            dcnt[keyidx[k]] += 1; dl.append([r[0], keyidx[k], r[1], r[4]])
+            dcnt[keyidx[k]] += 1; dl.append([r[0], keyidx[k], r[1], r[4], r[3] if k == 'REAL' else ''])
         NP = len(parties); dcnt += [0] * (NP - len(dcnt))
         des = dict(n=dcnt, list=dl, kind=S.get('kind', 'auto'), note=S.get('note', ''))
     nat['des'] = des['n'] if des else [0] * NP

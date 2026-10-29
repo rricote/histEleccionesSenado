@@ -213,7 +213,7 @@ function drawNatMap(target, MAP, CCM, cfg) {
 
 /* ---- ranking de partidos para titulares ---- */
 const art = k => (G.parties[k].n === 'PP' || /^(Vox|Sumar|Junts|Podemos|CC|BNG)/i.test(G.parties[k].n)) ? '' : (G.parties[k].n === 'PSOE' ? 'el ' : '');
-const SEQ = ['PSP', 'IU', 'ICV', 'ECP', 'PODEMOS', 'SUMAR', 'ENMAREA', 'COMPROMIS', 'MASPAIS', 'EQUO', 'HB', 'BILDU', 'EA', 'EE', 'BNG', 'CUP', 'ERC', 'NC', 'PA', 'PSOE', 'CHA', 'NABAI', 'JUNTS', 'CIU', 'PDECAT', 'PNV', 'CC', 'UV', 'PAR', 'PRC', 'TERUEL', 'CS', 'UPYD', 'CDS', 'UCD', 'PP', 'FAC', 'UPN', 'NAVARRASUMA', 'SALF', 'FN', 'VOX'];
+const SEQ = ['PSP', 'IU', 'ICV', 'ECP', 'PODEMOS', 'SUMAR', 'ENMAREA', 'COMPROMIS', 'MASPAIS', 'EQUO', 'HB', 'BILDU', 'EA', 'EE', 'BNG', 'CUP', 'ERC', 'NC', 'PA', 'PSOE', 'CHA', 'NABAI', 'JUNTS', 'CIU', 'PDECAT', 'PNV', 'CC', 'UV', 'PAR', 'PRC', 'TERUEL', 'CS', 'UPYD', 'CDS', 'UCD', 'PP', 'FAC', 'UPN', 'NAVARRASUMA', 'SALF', 'FN', 'VOX', 'REAL'];
 
 /* ---- barra fija: elección, provincia y municipio ---- */
 async function mountBar(curProv, curMun, curCc) {
@@ -479,10 +479,12 @@ function hemiSVG(svg, seats, opts = {}) {
   const p = []; radii.forEach((r, k) => { for (let j = 0; j < cnt[k]; j++) p.push([Math.PI - Math.PI * (cnt[k] === 1 ? .5 : j / (cnt[k] - 1)), r]) });
   p.sort((a, b) => b[0] - a[0] || a[1] - b[1]);
   const rr = tot > 230 ? 3.9 : 4.4;
-  svg.innerHTML = p.map((q, n) => { const s = seats[n]; if (!s) return ''; const x = (cx + q[1] * Math.cos(q[0])).toFixed(1), y = (cy - q[1] * Math.sin(q[0])).toFixed(1), t = `<title>${esc(G.parties[s.i].n)}${s.kind === 'D' ? ' · designado' : ' · electo'}${s.ind ? ' (independiente)' : ''}${s.nm ? ' · ' + esc(s.nm) : ''}</title>`;
+  svg.innerHTML = p.map((q, n) => { const s = seats[n]; if (!s) return ''; const x = (cx + q[1] * Math.cos(q[0])).toFixed(1), y = (cy - q[1] * Math.sin(q[0])).toFixed(1), t = `<title>${esc(G.parties[s.i].n)}${s.kind === 'D' ? (G.parties[s.i].k === 'REAL' ? ' · designación real' : ' · designado') : ' · electo'}${s.ind ? ' (independiente)' : ''}${s.nm ? ' · ' + esc(s.nm) : ''}</title>`;
+    if (s.kind === 'D' && G.parties[s.i].k === 'REAL') { const r = rr * 1.15, X = +x, Y = +y + r * 0.1, f = v => v.toFixed(2);
+      return `<path d="M${f(X - r)},${f(Y + .62 * r)}L${f(X - r)},${f(Y - .55 * r)}L${f(X - .5 * r)},${f(Y - .05 * r)}L${f(X)},${f(Y - .85 * r)}L${f(X + .5 * r)},${f(Y - .05 * r)}L${f(X + r)},${f(Y - .55 * r)}L${f(X + r)},${f(Y + .62 * r)}Z" fill="${pcol(s.i)}" stroke="var(--surface)" stroke-width=".6" stroke-linejoin="round">${t}</path>` }
     if (s.kind === 'D') return `<circle cx="${x}" cy="${y}" r="${rr - 1}" fill="var(--surface)" stroke="${pcol(s.i)}" stroke-width="2">${t}</circle>`;
     if (s.ind) return `<g><path d="M${x},${+y - rr}A${rr},${rr} 0 0 0 ${x},${+y + rr}Z" fill="var(--c-INDX)"/><path d="M${x},${+y - rr}A${rr},${rr} 0 0 1 ${x},${+y + rr}Z" fill="${pcol(s.i)}"/>${t}</g>`;
     return `<circle cx="${x}" cy="${y}" r="${rr}" fill="${pcol(s.i)}">${t}</circle>` }).join('');
 }
-const LEFT = ['PSP', 'IU', 'ICV', 'ECP', 'PODEMOS', 'SUMAR', 'ENMAREA', 'COMPROMIS', 'MASPAIS', 'EQUO', 'HB', 'BILDU', 'EA', 'EE', 'BNG', 'CUP', 'ERC', 'ENTESA', 'SENDEM', 'NC', 'PA', 'PSOESUMAR', 'PSOE', 'CHA', 'NABAI', 'CAMBIO', 'FA', 'ASG', 'JUNTS', 'CATSEN', 'CIU', 'PDECAT', 'PNV', 'AHI', 'CC', 'UV', 'PAR', 'PRC', 'TERUEL', 'IND', 'CS', 'UPYD', 'CDS', 'UCD', 'PP', 'FAC', 'UPN', 'NAVARRASUMA', 'SALF', 'FN', 'VOX'];
+const LEFT = ['PSP', 'IU', 'ICV', 'ECP', 'PODEMOS', 'SUMAR', 'ENMAREA', 'COMPROMIS', 'MASPAIS', 'EQUO', 'HB', 'BILDU', 'EA', 'EE', 'BNG', 'CUP', 'ERC', 'ENTESA', 'SENDEM', 'NC', 'PA', 'PSOESUMAR', 'PSOE', 'CHA', 'NABAI', 'CAMBIO', 'FA', 'ASG', 'JUNTS', 'CATSEN', 'CIU', 'PDECAT', 'PNV', 'AHI', 'CC', 'UV', 'PAR', 'PRC', 'TERUEL', 'IND', 'CS', 'UPYD', 'CDS', 'UCD', 'PP', 'FAC', 'UPN', 'NAVARRASUMA', 'SALF', 'FN', 'VOX', 'REAL'];
 const seatKey = k => { const j = LEFT.indexOf(k); return j < 0 ? LEFT.indexOf('IND') : j };

@@ -98,20 +98,21 @@ function seatList() {
   const list = [], nm = {};
   G.circ.forEach(c => c.c.forEach(r => { if (r[3]) (nm[r[1]] = nm[r[1]] || []).push({ nm: r[0] + ' (' + c.n + ')', ind: !!r[4] }) }));
   const ps = G.parties.map((p, i) => i).filter(i => G.nat.tot[i] > 0).sort((a, b) => seatKey(G.parties[a].k) - seatKey(G.parties[b].k) || G.nat.tot[b] - G.nat.tot[a]);
-  ps.forEach(i => { (nm[i] || []).sort((a, b) => a.ind - b.ind).forEach(x => list.push({ i, kind: 'E', ind: x.ind, nm: x.nm })); for (let k = 0; k < (G.nat.des[i] || 0); k++) list.push({ i, kind: 'D', nm: G.des ? (G.des.list.filter(d => d[1] === i)[k] || [])[0] : '' }) });
+  ps.forEach(i => { (nm[i] || []).sort((a, b) => a.ind - b.ind).forEach(x => list.push({ i, kind: 'E', ind: x.ind, nm: x.nm })); const dl = G.des ? G.des.list.filter(d => d[1] === i) : []; for (let k = 0; k < (G.nat.des[i] || 0); k++) { const d = dl[k] || []; list.push({ i, kind: 'D', nm: d[0] ? d[0] + (d[4] ? ' (grupo ' + d[4] + ')' : '') : '' }) } });
   return list;
 }
 function seatsView() {
   const tot = TOT(), el = G.nat.s, ds = tot - el;
   hemiSVG($('#hemi'), seatList());
   $('#hemin').textContent = tot; $('#hemil').textContent = ds ? `senadores · mayoría ${MAJ()}` : `senadores electos · mayoría ${MAJ()}`;
-  $('#sennote').textContent = (ds ? `${el} senadores elegidos en las urnas (círculos llenos) y ${ds} ${G.year === 1977 ? 'designados por el Rey' : 'designados por los parlamentos autonómicos'} (círculos huecos) al inicio de la legislatura ${G.leg}. ` : `${el} senadores elegidos en las urnas; no hay datos de designados para esta legislatura. `) + 'En cada circunscripción salen elegidos los candidatos más votados, sin reparto proporcional. Los círculos mitad gris son independientes en la lista de un partido.';
+  $('#sennote').textContent = (ds ? `${el} senadores elegidos en las urnas (círculos llenos) y ${ds} ${G.year === 1977 ? 'designados por el Rey' : 'designados por los parlamentos autonómicos'} (${G.year === 1977 ? 'coronas, agrupados aparte' : 'círculos huecos'}) al inicio de la legislatura ${G.leg}. ` : `${el} senadores elegidos en las urnas; no hay datos de designados para esta legislatura. `) + 'En cada circunscripción salen elegidos los candidatos más votados, sin reparto proporcional. Los círculos mitad gris son independientes en la lista de un partido.';
   const anyInd = G.circ.some(c => c.c.some(r => r[3] && r[4]));
-  $('#hleg').innerHTML = (ds ? '<span><i style="background:var(--ink)"></i>Electo</span><span><i style="background:transparent;border:2px solid var(--ink);border-radius:50%"></i>Designado</span>' : '') + (anyInd ? '<span><i style="background:linear-gradient(90deg,var(--c-INDX) 50%,var(--ink) 50%);border-radius:50%"></i>Independiente en lista de partido</span>' : '');
+  const real = G.parties.findIndex(p => p.k === 'REAL'), nreal = real >= 0 ? G.nat.des[real] || 0 : 0;
+  $('#hleg').innerHTML = (ds ? '<span><i style="background:var(--ink)"></i>Electo</span>' + (ds > nreal ? '<span><i style="background:transparent;border:2px solid var(--ink);border-radius:50%"></i>Designado por un parlamento autonómico</span>' : '') + (nreal ? `<span><svg width="13" height="11" viewBox="0 0 13 11" style="vertical-align:-1px;margin-right:5px"><path d="M.5,10.5V2.5L3.5,6L6.5,.5L9.5,6L12.5,2.5V10.5Z" fill="${pcol(real)}"/></svg>Designado por el Rey</span>` : '') : '') + (anyInd ? '<span><i style="background:linear-gradient(90deg,var(--c-INDX) 50%,var(--ink) 50%);border-radius:50%"></i>Independiente en lista de partido</span>' : '');
   const n = G.nat, ps = G.parties.map((p, i) => i).filter(i => n.tot[i] > 0).sort((a, b) => n.tot[b] - n.tot[a] || n.v[b] - n.v[a]);
   const nind = i => G.circ.reduce((a, c) => a + c.c.filter(r => r[1] === i && r[3] && r[4]).length, 0);
   $('#tbl thead').innerHTML = `<tr><th>Partido</th><th>Electos</th>${ds ? '<th>Designados</th><th>Total</th>' : ''}<th>% voto</th></tr>`;
-  $('#tbl tbody').innerHTML = ps.map(i => { const ni = nind(i); return `<tr><td>${swatch(i)}${esc(G.parties[i].n)}${ni ? ` <small class="indn">${ni} indep.</small>` : ''}</td><td class="s">${n.el[i]}</td>${ds ? `<td class="s">${n.des[i] || 0}</td><td class="s"><b>${n.tot[i]}</b></td>` : ''}<td class="r">${fmt(n.v[i] / n.vb)}</td></tr>` }).join('');
+  $('#tbl tbody').innerHTML = ps.map(i => { const ni = nind(i); return `<tr><td>${swatch(i)}${esc(G.parties[i].n)}${ni ? ` <small class="indn">${ni} indep.</small>` : ''}</td><td class="s">${n.el[i]}</td>${ds ? `<td class="s">${n.des[i] || 0}</td><td class="s"><b>${n.tot[i]}</b></td>` : ''}<td class="r">${n.v[i] ? fmt(n.v[i] / n.vb) : '–'}</td></tr>` }).join('');
 }
 function groupsDef() { const K = {}; G.parties.forEach((p, i) => K[p.k] = i); return G.groups.map(g => ({ id: g.id, label: g.label, idx: g.keys.map(k => K[k]).filter(i => i !== undefined) })) }
 function groups() {
